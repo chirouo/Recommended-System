@@ -45,6 +45,14 @@
         </div>
         <div class="form-group">
           <input 
+            type="email" 
+            v-model="registerForm.email" 
+            placeholder="邮箱地址"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <input 
             type="password" 
             v-model="registerForm.password" 
             placeholder="密码"
@@ -67,6 +75,10 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import axios from 'axios'
+
+// 修改API基础URL
+const API_BASE_URL = 'http://localhost:8080'  // 改为正确的后端地址
 
 // 控制显示登录还是注册表单
 const isLogin = ref(true)
@@ -81,23 +93,74 @@ const loginForm = reactive({
 const registerForm = reactive({
   username: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  email: ''
 })
 
 // 登录处理
-const handleLogin = () => {
-  console.log('登录信息：', loginForm)
-  // 这里添加登录逻辑
+const handleLogin = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/login`, {
+      username: loginForm.username,
+      password: loginForm.password
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    console.log(response.data)
+    if (response.data.success) {
+      // 存储token
+      localStorage.setItem('token', response.data.data.token)
+      // 存储用户信息
+      localStorage.setItem('user', JSON.stringify(response.data.data.user))
+      alert(response.data.message) // "登录成功"
+      // 这里可以添加路由跳转
+    }
+  } catch (error) {
+    console.error('登录失败：', error)
+    const errorMessage = error.response?.data?.message || '登录失败，请重试'
+    alert(errorMessage)
+  }
 }
 
 // 注册处理
-const handleRegister = () => {
+const handleRegister = async () => {
   if (registerForm.password !== registerForm.confirmPassword) {
     alert('两次输入的密码不一致！')
     return
   }
-  console.log('注册信息：', registerForm)
-  // 这里添加注册逻辑
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/register`, {
+      username: registerForm.username,
+      password: registerForm.password,
+      email: registerForm.email
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.data.success) {
+      alert(response.data.message) // "注册成功"
+      // 存储token和用户信息
+      localStorage.setItem('token', response.data.data.token)
+      localStorage.setItem('user', JSON.stringify(response.data.data.user))
+      
+      // 清空表单并切换到登录界面
+      isLogin.value = true
+      registerForm.username = ''
+      registerForm.password = ''
+      registerForm.confirmPassword = ''
+      registerForm.email = ''
+    }
+  } catch (error) {
+    console.error('注册失败：', error)
+    const errorMessage = error.response?.data?.message || '注册失败，请重试'
+    alert(errorMessage)
+  }
 }
 </script>
 
